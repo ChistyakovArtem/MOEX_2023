@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -79,7 +81,7 @@ class AlphaManager:
         
         return df
 
-    def __init__(self, fees=0.0004, inflation=0.15, sectors_df=None, verbose=True):
+    def __init__(self, fees=0.0004, inflation=0.15, sectors_df=None, verbose=True, alphas_folder='alphas'):
 
         if sectors_df is None:
             if verbose:
@@ -95,6 +97,9 @@ class AlphaManager:
         self.fees = fees
         self.inflation = inflation
         self.verbose = verbose
+        if not os.path.exists(alphas_folder):
+            # Create the directory
+            os.mkdir(alphas_folder)
 
         self.sector_dict = dict(zip(sectors_df['SECID'], sectors_df['sector']))
         self.board_dict = dict(zip(sectors_df['SECID'], sectors_df['BOARDID']))
@@ -209,6 +214,8 @@ class AlphaManager:
                 if row is None:
                     delta_position[ticker] = 0
                 else:
+                    row_ = row.copy()
+                    row_['next_open'] = np.nan
                     delta_position[ticker] = alpha.alpha_class(ticker, row)
             
             delta_position = pd.DataFrame({
@@ -223,7 +230,7 @@ class AlphaManager:
             return 
 
         pnl_logs, used_amount_logs = self.compute_pnl_and_amount(logs)
-        sharpe_casual, sharpe, max_drawdown, return_to_drawdown = self.compute_metrics(pnl_logs, used_amount_logs)
+        sharpe_casual, sharpe, return_to_drawdown = self.compute_metrics(pnl_logs, used_amount_logs)
         print(f'Sharpe (no inflation): {sharpe_casual}')
         print(f'Sharpe (normal): {sharpe}')
         print(f'Return to Drawdown: {return_to_drawdown}')
@@ -248,7 +255,7 @@ class AlphaManager:
                     if response == 'y':
                         path = input('Enter the path to the file, you want to save the strategy (without extension):')
                         path = path + '.pkl'
-                        with open('my_instance.pkl', 'wb') as file:
+                        with open(path, 'wb') as file:
                             pickle.dump(alpha, file)
                         print(f'Your strategy was saved to the file {path}')
 
